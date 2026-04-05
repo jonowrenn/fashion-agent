@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/require-user";
 import { getOpenAI, getOpenAIModel } from "@/lib/openai";
 
 const responseSchema = {
@@ -37,6 +38,9 @@ const responseSchema = {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireUserId();
+    if ("response" in auth) return auth.response;
+
     const body = (await req.json()) as {
       occasion?: string;
       weather?: string;
@@ -51,7 +55,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const items = await prisma.item.findMany({ orderBy: { name: "asc" } });
+    const items = await prisma.item.findMany({
+      where: { userId: auth.userId },
+      orderBy: { name: "asc" },
+    });
     if (items.length === 0) {
       return NextResponse.json(
         {
@@ -64,6 +71,7 @@ export async function POST(req: Request) {
     const wardrobe = items.map((i) => ({
       id: i.id,
       name: i.name,
+      brand: i.brand,
       category: i.category,
       colors: i.colors,
       seasons: i.seasons,

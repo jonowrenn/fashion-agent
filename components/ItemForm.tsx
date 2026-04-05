@@ -8,10 +8,12 @@ type Props = {
   editing: ItemDTO | null;
   onDone: (item: ItemDTO) => void;
   onCancelEdit: () => void;
+  onToast?: (message: string, variant: "success" | "error") => void;
 };
 
-export function ItemForm({ editing, onDone, onCancelEdit }: Props) {
+export function ItemForm({ editing, onDone, onCancelEdit, onToast }: Props) {
   const [name, setName] = useState("");
+  const [brand, setBrand] = useState("");
   const [category, setCategory] = useState<string>(ITEM_CATEGORIES[0]);
   const [colors, setColors] = useState("");
   const [seasons, setSeasons] = useState("");
@@ -27,6 +29,7 @@ export function ItemForm({ editing, onDone, onCancelEdit }: Props) {
   useEffect(() => {
     if (editing) {
       setName(editing.name);
+      setBrand(editing.brand ?? "");
       setCategory(editing.category);
       setColors(editing.colors);
       setSeasons(editing.seasons);
@@ -38,6 +41,7 @@ export function ItemForm({ editing, onDone, onCancelEdit }: Props) {
       setFile(null);
     } else {
       setName("");
+      setBrand("");
       setCategory(ITEM_CATEGORIES[0]);
       setColors("");
       setSeasons("");
@@ -92,6 +96,7 @@ export function ItemForm({ editing, onDone, onCancelEdit }: Props) {
     try {
       const fd = new FormData();
       fd.set("name", name.trim());
+      fd.set("brand", brand.trim());
       fd.set("category", category);
       fd.set("colors", colors);
       fd.set("seasons", seasons);
@@ -110,6 +115,7 @@ export function ItemForm({ editing, onDone, onCancelEdit }: Props) {
       if (json.item) onDone(json.item);
       if (!editing) {
         setName("");
+        setBrand("");
         setCategory(ITEM_CATEGORIES[0]);
         setColors("");
         setSeasons("");
@@ -121,7 +127,9 @@ export function ItemForm({ editing, onDone, onCancelEdit }: Props) {
         setFile(null);
       }
     } catch (err) {
-      setResolveMsg(err instanceof Error ? err.message : "Save failed");
+      const msg = err instanceof Error ? err.message : "Save failed";
+      setResolveMsg(msg);
+      onToast?.(msg, "error");
     } finally {
       setBusy(false);
     }
@@ -138,88 +146,116 @@ export function ItemForm({ editing, onDone, onCancelEdit }: Props) {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 outline-none ring-rose-500/30 focus:ring-2"
-            placeholder="e.g. Navy wool blazer"
+            className="rounded-lg border border-stone-300/80 bg-stone-100 px-3 py-2 text-stone-900 outline-none ring-rose-500/30 focus:ring-2"
+            placeholder="Exact product title if you have it"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium text-stone-700">
-          Category
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 outline-none ring-rose-500/30 focus:ring-2"
-          >
-            {ITEM_CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm font-medium text-stone-700">
-          Colors
+          Brand
           <input
-            value={colors}
-            onChange={(e) => setColors(e.target.value)}
-            className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 outline-none ring-rose-500/30 focus:ring-2"
-            placeholder="navy, cream"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium text-stone-700">
-          Seasons
-          <input
-            value={seasons}
-            onChange={(e) => setSeasons(e.target.value)}
-            className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 outline-none ring-rose-500/30 focus:ring-2"
-            placeholder="fall, winter"
-          />
-        </label>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm font-medium text-stone-700">
-          Formality
-          <select
-            value={formality}
-            onChange={(e) => setFormality(e.target.value)}
-            className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 outline-none ring-rose-500/30 focus:ring-2"
-          >
-            <option value="">—</option>
-            {FORMALITY_OPTIONS.map((f) => (
-              <option key={f} value={f}>
-                {f.replace("-", " ")}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium text-stone-700">
-          Tags
-          <input
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 outline-none ring-rose-500/30 focus:ring-2"
-            placeholder="work, weekend"
+            value={brand}
+            onChange={(e) => setBrand(e.target.value)}
+            className="rounded-lg border border-stone-300/80 bg-stone-100 px-3 py-2 text-stone-900 outline-none ring-rose-500/30 focus:ring-2"
+            placeholder="e.g. UNIQLO, Nike"
           />
         </label>
       </div>
 
       <label className="flex flex-col gap-1 text-sm font-medium text-stone-700">
-        Notes
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={2}
-          className="resize-y rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 outline-none ring-rose-500/30 focus:ring-2"
-          placeholder="Fit, fabric, how you like to wear it…"
-        />
+        Category
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="max-w-md rounded-lg border border-stone-300/80 bg-stone-100 px-3 py-2 text-stone-900 outline-none ring-rose-500/30 focus:ring-2"
+        >
+          {ITEM_CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
       </label>
+
+      <details className="group rounded-xl border border-stone-300/70 bg-stone-100/40 open:bg-stone-50 open:shadow-sm">
+        <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-stone-800 marker:content-none [&::-webkit-details-marker]:hidden">
+          <span className="flex items-center justify-between gap-2">
+            <span>More details</span>
+            <span className="text-xs font-normal text-stone-500">
+              <span className="group-open:hidden">Colors, seasons, tags…</span>
+              <span className="hidden group-open:inline">Tap to hide</span>
+            </span>
+          </span>
+        </summary>
+        <div className="flex flex-col gap-4 border-t border-stone-100 px-4 pb-4 pt-2">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="flex flex-col gap-1 text-sm font-medium text-stone-700">
+              Colors
+              <input
+                value={colors}
+                onChange={(e) => setColors(e.target.value)}
+                className="rounded-lg border border-stone-300/80 bg-stone-100 px-3 py-2 text-stone-900 outline-none ring-rose-500/30 focus:ring-2"
+                placeholder="navy, cream"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium text-stone-700">
+              Seasons
+              <input
+                value={seasons}
+                onChange={(e) => setSeasons(e.target.value)}
+                className="rounded-lg border border-stone-300/80 bg-stone-100 px-3 py-2 text-stone-900 outline-none ring-rose-500/30 focus:ring-2"
+                placeholder="fall, winter"
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="flex flex-col gap-1 text-sm font-medium text-stone-700">
+              Formality
+              <select
+                value={formality}
+                onChange={(e) => setFormality(e.target.value)}
+                className="rounded-lg border border-stone-300/80 bg-stone-100 px-3 py-2 text-stone-900 outline-none ring-rose-500/30 focus:ring-2"
+              >
+                <option value="">—</option>
+                {FORMALITY_OPTIONS.map((f) => (
+                  <option key={f} value={f}>
+                    {f.replace("-", " ")}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium text-stone-700">
+              Tags
+              <input
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                className="rounded-lg border border-stone-300/80 bg-stone-100 px-3 py-2 text-stone-900 outline-none ring-rose-500/30 focus:ring-2"
+                placeholder="work, weekend"
+              />
+            </label>
+          </div>
+
+          <label className="flex flex-col gap-1 text-sm font-medium text-stone-700">
+            Notes
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              className="resize-y rounded-lg border border-stone-300/80 bg-stone-100 px-3 py-2 text-stone-900 outline-none ring-rose-500/30 focus:ring-2"
+              placeholder="Fit, fabric, how you like to wear it…"
+            />
+          </label>
+        </div>
+      </details>
 
       <div className="rounded-xl border border-dashed border-stone-300 bg-stone-50/80 p-4">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
           Product link & photo
+        </p>
+        <p className="mb-3 text-xs text-stone-500">
+          If you paste a product link and save without a photo, we automatically try to fetch
+          the store&apos;s image (when their page allows it). Use{" "}
+          <strong>Load preview</strong> first if you want to see it before saving.
         </p>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
           <label className="flex flex-1 flex-col gap-1 text-sm font-medium text-stone-700">
@@ -228,7 +264,7 @@ export function ItemForm({ editing, onDone, onCancelEdit }: Props) {
               value={productUrl}
               onChange={(e) => setProductUrl(e.target.value)}
               type="url"
-              className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 outline-none ring-rose-500/30 focus:ring-2"
+              className="rounded-lg border border-stone-300/80 bg-stone-100 px-3 py-2 text-stone-900 outline-none ring-rose-500/30 focus:ring-2"
               placeholder="https://…"
             />
           </label>
@@ -236,7 +272,7 @@ export function ItemForm({ editing, onDone, onCancelEdit }: Props) {
             type="button"
             onClick={() => void resolveProductUrl()}
             disabled={busy}
-            className="shrink-0 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-50"
+            className="shrink-0 rounded-lg border border-stone-300/80 bg-stone-100 px-4 py-2 text-sm font-medium text-stone-800 hover:bg-stone-200/80 disabled:opacity-50"
           >
             Load preview
           </button>
@@ -250,7 +286,7 @@ export function ItemForm({ editing, onDone, onCancelEdit }: Props) {
             <input
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
-              className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 outline-none ring-rose-500/30 focus:ring-2"
+              className="rounded-lg border border-stone-300/80 bg-stone-100 px-3 py-2 text-stone-900 outline-none ring-rose-500/30 focus:ring-2"
               placeholder="Filled by Load preview or paste directly"
             />
           </label>
@@ -265,7 +301,7 @@ export function ItemForm({ editing, onDone, onCancelEdit }: Props) {
           </label>
         </div>
         {imageUrl ? (
-          <div className="mt-3 overflow-hidden rounded-lg border border-stone-200 bg-white">
+          <div className="mt-3 overflow-hidden rounded-lg border border-stone-300/80 bg-stone-100">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={imageUrl}
@@ -288,7 +324,7 @@ export function ItemForm({ editing, onDone, onCancelEdit }: Props) {
           <button
             type="button"
             onClick={onCancelEdit}
-            className="rounded-full border border-stone-300 bg-white px-5 py-2.5 text-sm font-medium text-stone-800 hover:bg-stone-50"
+            className="rounded-full border border-stone-300/80 bg-stone-100 px-5 py-2.5 text-sm font-medium text-stone-800 hover:bg-stone-200/80"
           >
             Cancel edit
           </button>

@@ -1,8 +1,18 @@
 @import "tailwindcss";
 
+/*
+  Light-only app surface: avoid prefers-color-scheme:dark flipping --background,
+  which was painting the page black while cards stayed white.
+ */
+html {
+  /* Avoid horizontal jump when vertical scrollbar appears/disappears between tabs. */
+  scrollbar-gutter: stable;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f5f4; /* stone-100 */
+  --foreground: #1c1917; /* stone-900 */
+  color-scheme: light;
 }
 
 @theme inline {
@@ -12,14 +22,8 @@
   --font-serif: var(--font-cormorant), ui-serif, Georgia, serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
+  min-height: 100dvh;
+  background-color: var(--background);
   color: var(--foreground);
 }

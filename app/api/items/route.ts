@@ -1,15 +1,26 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { itemToDTO } from "@/lib/types";
+import { requireUserId } from "@/lib/require-user";
 import { saveUploadedImage } from "@/lib/upload";
+import { resolveProductPage } from "@/lib/resolve-product-page";
 import { assertCategory, parseListField } from "@/lib/validate-item";
 
 export async function GET() {
-  const items = await prisma.item.findMany({ orderBy: { updatedAt: "desc" } });
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
+
+  const items = await prisma.item.findMany({
+    where: { userId: auth.userId },
+    orderBy: { updatedAt: "desc" },
+  });
   return NextResponse.json({ items: items.map(itemToDTO) });
 }
 
 export async function POST(req: Request) {
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
+
   try {
     const contentType = req.headers.get("content-type") ?? "";
     if (!contentType.includes("multipart/form-data")) {
@@ -36,6 +47,7 @@ export async function POST(req: Request) {
     const formalityRaw = String(form.get("formality") ?? "").trim();
     const formality = formalityRaw || null;
     const notes = String(form.get("notes") ?? "").trim() || null;
+    const brand = String(form.get("brand") ?? "").trim() || null;
     const productUrl = String(form.get("productUrl") ?? "").trim() || null;
     const externalImageUrl = String(form.get("imageUrl") ?? "").trim() || null;
 
@@ -45,11 +57,16 @@ export async function POST(req: Request) {
       imageUrl = await saveUploadedImage(image);
     } else if (externalImageUrl) {
       imageUrl = externalImageUrl;
+    } else if (productUrl) {
+      const resolved = await resolveProductPage(productUrl);
+      imageUrl = resolved.imageUrl;
     }
 
     const item = await prisma.item.create({
       data: {
+        userId: auth.userId,
         name,
+        brand,
         category,
         colors,
         seasons,

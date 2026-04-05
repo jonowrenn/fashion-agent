@@ -12,9 +12,20 @@ datasource db {
   provider = "sqlite"
 }
 
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  items        Item[]
+}
+
 model Item {
   id         String   @id @default(cuid())
   name       String
+  brand      String?
   category   String
   colors     String   @default("")
   seasons    String   @default("")
@@ -25,4 +36,20 @@ model Item {
   tags       String   @default("")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ProductPreviewCache {
+  url       String   @id
+  title     String?
+  imageUrl  String?
+  ok        Boolean
+  status    Int?
+  error     String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

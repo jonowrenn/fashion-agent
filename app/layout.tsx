@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import { getServerSession } from "next-auth";
 import { Cormorant_Garamond, DM_Sans } from "next/font/google";
+import { Providers } from "@/components/Providers";
+import { authOptions } from "@/lib/auth-options";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -18,18 +21,20 @@ export const metadata: Metadata = {
   description: "Inventory your clothes and get AI outfit ideas from what you actually own.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getServerSession(authOptions);
+
   return (
     <html
       lang="en"
       className={`${dmSans.variable} ${cormorant.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-stone-50 font-sans text-stone-900">
-        {children}
+      <body className="min-h-full flex flex-col bg-stone-100 font-sans text-stone-900">
+        <Providers session={session}>{children}</Providers>
       </body>
     </html>
   );
