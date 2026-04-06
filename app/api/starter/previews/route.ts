@@ -28,13 +28,26 @@ async function fetchAllPreviews(): Promise<Record<string, StarterPreview>> {
         s.id,
         {
           imageUrl: r.imageUrl,
-          title: r.title,
+          title: preferStarterTitle(r.title, s.retailerProductTitle),
           ok: r.ok,
         } satisfies StarterPreview,
       ] as const;
     }),
   );
   return Object.fromEntries(results);
+}
+
+function preferStarterTitle(
+  resolvedTitle: string | null,
+  fallbackTitle: string,
+): string {
+  const title = resolvedTitle?.trim();
+  if (!title) return fallbackTitle;
+  const lowered = title.toLowerCase();
+  if (/^(men|mens|women|womens|kids|boys|girls)$/.test(lowered)) {
+    return fallbackTitle;
+  }
+  return title;
 }
 
 async function withTimeout<T>(
@@ -57,7 +70,7 @@ async function withTimeout<T>(
 
 const getCachedPreviews = unstable_cache(
   async () => fetchAllPreviews(),
-  ["starter-product-previews-rendered-fallback-v6"],
+  ["starter-product-previews-rendered-fallback-v7"],
   { revalidate: 900 },
 );
 

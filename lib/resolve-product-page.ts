@@ -162,12 +162,13 @@ function resolveProductPageFromHtml(
   base: URL,
   hintedImageUrls: string[] = [],
 ): ResolveProductPageResult {
-  const title =
-    matchMeta(html, "property", "og:title") ??
-    matchMeta(html, "name", "twitter:title") ??
-    matchItemPropValue(html, "name") ??
-    matchHeading(html, "h1") ??
-    matchTag(html, "title");
+  const title = chooseBestTitle([
+    matchMeta(html, "property", "og:title"),
+    matchMeta(html, "name", "twitter:title"),
+    matchItemPropValue(html, "name"),
+    matchHeading(html, "h1"),
+    matchTag(html, "title"),
+  ]);
 
   const imageCandidates = collectImageCandidates(html, base, hintedImageUrls);
   const absoluteImage = chooseBestImage(imageCandidates);
@@ -177,6 +178,33 @@ function resolveProductPageFromHtml(
     title: title?.trim() || null,
     imageUrl: absoluteImage,
   };
+}
+
+function chooseBestTitle(candidates: Array<string | null>): string | null {
+  const normalized = candidates
+    .map((candidate) => normalizeTitle(candidate))
+    .filter((candidate): candidate is string => Boolean(candidate));
+  const strong = normalized.find((candidate) => !isWeakTitle(candidate));
+  return strong ?? normalized[0] ?? null;
+}
+
+function normalizeTitle(value: string | null): string | null {
+  if (!value) return null;
+  const cleaned = value
+    .replace(/\s+/g, " ")
+    .replace(/[|•]\s*(uniqlo|j\.crew|jcrew|gap|old navy|banana republic|cos|zara|h&m|target|nordstrom)\b.*$/i, "")
+    .trim();
+  return cleaned || null;
+}
+
+function isWeakTitle(value: string): boolean {
+  const lowered = value.trim().toLowerCase();
+  if (!lowered) return true;
+  if (/^(men|mens|women|womens|kids|boys|girls)$/.test(lowered)) return true;
+  if (/^(men|mens|women|womens)\s+(new arrivals|clothing|tops|bottoms|shoes)$/.test(lowered)) {
+    return true;
+  }
+  return lowered.length < 5;
 }
 
 async function resolveViaBrowser(
