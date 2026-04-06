@@ -11,7 +11,19 @@ import { resolveProductPage } from "@/lib/resolve-product-page";
 async function fetchAllPreviews(): Promise<Record<string, StarterPreview>> {
   const results = await Promise.all(
     STARTER_ITEMS.map(async (s) => {
-      const r = await resolveProductPage(s.productUrl);
+      const r = await withTimeout(
+        resolveProductPage(s.productUrl, {
+          fetchTimeoutMs: 5_500,
+          browserTimeoutMs: 7_000,
+        }),
+        9_000,
+        {
+          ok: false,
+          title: null,
+          imageUrl: null,
+          error: "Preview timeout",
+        },
+      );
       return [
         s.id,
         {
@@ -25,10 +37,28 @@ async function fetchAllPreviews(): Promise<Record<string, StarterPreview>> {
   return Object.fromEntries(results);
 }
 
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  fallbackValue: T,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => resolve(fallbackValue), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 const getCachedPreviews = unstable_cache(
   async () => fetchAllPreviews(),
-  ["starter-product-previews-rendered-fallback-v5"],
-  { revalidate: 3600 },
+  ["starter-product-previews-rendered-fallback-v6"],
+  { revalidate: 900 },
 );
 
 export async function GET() {

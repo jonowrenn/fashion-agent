@@ -19,8 +19,14 @@ export type ResolveProductPageResult = {
   error?: string;
 };
 
+type ResolveProductPageOptions = {
+  fetchTimeoutMs?: number;
+  browserTimeoutMs?: number;
+};
+
 export async function resolveProductPage(
   targetUrl: string,
+  options: ResolveProductPageOptions = {},
 ): Promise<ResolveProductPageResult> {
   const target = targetUrl.trim();
   if (!target) {
@@ -57,6 +63,8 @@ export async function resolveProductPage(
   }
 
   const strategy = getRetailerPreviewStrategy(parsed.hostname);
+  const fetchTimeoutMs = options.fetchTimeoutMs ?? 6_500;
+  const browserTimeoutMs = options.browserTimeoutMs ?? 8_000;
 
   try {
     const res = await fetch(normalizedUrl, {
@@ -67,7 +75,7 @@ export async function resolveProductPage(
         Accept: "text/html,application/xhtml+xml",
         "Accept-Language": "en-US,en;q=0.9",
       },
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(fetchTimeoutMs),
     });
 
     if (!res.ok) {
@@ -79,7 +87,12 @@ export async function resolveProductPage(
         error: `HTTP ${res.status}`,
       };
       if (shouldUseBrowserFallback(result, strategy)) {
-        const fallback = await resolveViaBrowser(normalizedUrl, parsed, strategy);
+        const fallback = await resolveViaBrowser(
+          normalizedUrl,
+          parsed,
+          strategy,
+          browserTimeoutMs,
+        );
         if (fallback) {
           await cacheResolvedResult(cacheKey, normalizedUrl, fallback);
           return fallback;
@@ -92,14 +105,24 @@ export async function resolveProductPage(
     const html = await res.text();
     let result = resolveProductPageFromHtml(html, parsed);
     if (shouldUseBrowserFallback(result, strategy)) {
-      const fallback = await resolveViaBrowser(normalizedUrl, parsed, strategy);
+      const fallback = await resolveViaBrowser(
+        normalizedUrl,
+        parsed,
+        strategy,
+        browserTimeoutMs,
+      );
       if (fallback) result = fallback;
     }
     await cacheResolvedResult(cacheKey, normalizedUrl, result);
     return result;
   } catch (e) {
     const message = e instanceof Error ? e.message : "Resolve failed";
-    const fallback = await resolveViaBrowser(normalizedUrl, parsed, strategy);
+    const fallback = await resolveViaBrowser(
+      normalizedUrl,
+      parsed,
+      strategy,
+      browserTimeoutMs,
+    );
     if (fallback) {
       await cacheResolvedResult(cacheKey, normalizedUrl, fallback);
       return fallback;
@@ -160,10 +183,15 @@ async function resolveViaBrowser(
   targetUrl: string,
   base: URL,
   strategy: ReturnType<typeof getRetailerPreviewStrategy>,
+  timeoutMs: number,
 ): Promise<ResolveProductPageResult | null> {
   if (!shouldAttemptBrowserRender(strategy)) return null;
   try {
-    const rendered = await renderProductPageInBrowser(targetUrl, strategy);
+    const rendered = await withTimeout(
+      renderProductPageInBrowser(targetUrl, strategy),
+      timeoutMs,
+      "Browser preview timeout",
+    );
     if (!rendered) return null;
     const finalBase = safeUrl(rendered.finalUrl) ?? base;
     const result = resolveProductPageFromHtml(
@@ -174,6 +202,24 @@ async function resolveViaBrowser(
     return result.imageUrl || result.title ? result : null;
   } catch {
     return null;
+  }
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 
