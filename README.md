@@ -1,24 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is a Next.js wardrobe app for saving clothing items, resolving retailer product thumbnails, and generating outfit suggestions.
 
 ## Getting Started
 
-First, run the development server:
+Set environment variables first:
 
 ```bash
+cp .env.example .env
+```
+
+This app now expects a Postgres `DATABASE_URL`.
+
+Then run the app:
+
+```bash
+npm install
+npm run db:push
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploying On Vercel
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Use Vercel with a managed Postgres database, not SQLite.
+
+Recommended setup:
+
+```bash
+vercel
+```
+
+Set these env vars in Vercel:
+
+```bash
+DATABASE_URL=postgresql://...
+NEXTAUTH_SECRET=...
+NEXTAUTH_URL=https://your-project.vercel.app
+OPENAI_API_KEY=...
+OPENAI_MODEL=gpt-4o-mini
+PLAYWRIGHT_PREVIEW_FALLBACK=0
+```
+
+For a simple demo deploy:
+
+1. Create or attach a Postgres database in Vercel.
+2. Set the environment variables above.
+3. Run `npm run db:push` against that database once.
+4. Deploy the app.
+
+`PLAYWRIGHT_PREVIEW_FALLBACK` should stay `0` on Vercel for now. The fast server-fetch resolver still works, and the heavier browser fallback should be moved to a separate compatible worker/function setup later.
 
 ## Learn More
 
@@ -31,6 +61,6 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The easiest way to deploy is the [Vercel Platform](https://vercel.com/new).
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

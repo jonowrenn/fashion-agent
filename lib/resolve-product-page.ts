@@ -266,6 +266,7 @@ function shouldAttemptBrowserRender(
   const enabled = process.env.PLAYWRIGHT_PREVIEW_FALLBACK;
   if (enabled === "0" || enabled === "false") return false;
   if (enabled === "1" || enabled === "true") return true;
+  if (process.env.VERCEL === "1") return false;
   return Boolean(strategy);
 }
 
